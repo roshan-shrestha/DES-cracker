@@ -23,6 +23,7 @@
 #include <string>
 #include <fstream>
 #include <time.h>
+#include <thread>
 
 using namespace std;    
 
@@ -357,7 +358,6 @@ int run(string testkey)
 
     key_64 = to_bits(k.c_str());
     key_gen();
-    clock_t t1, t2;
     
     // Mode to check Encrypt or Decrypt
     char mode;
@@ -365,55 +365,11 @@ int run(string testkey)
 
     mode = 'D';
 
-    if (mode == 'E') {     
-        cout << "\nEncrypting...\n";
-        
-        // Timer starts here
-        t1 = clock();
-
-        // Read the plain text file 
-        ifstream ifile("plain.txt");
-        string p;
-        getline(ifile, p);
-        ifile.close();
-        pad_text( & p);
-        string temp_cipher;
-    
-        // Encrypt the plain text 64 bits at a time
-        for (int i = 0; i < p.length(); i += 8) {
-            bitset < 64 > message = to_bits((p.substr(i, 8)).c_str());
-            bitset < 64 > cipher = encrypt(message);
-            temp_cipher += to_string(cipher);
-        }
-        
-        ofstream ofile;
-        ofile.open("encrypted.txt");
-        ofile << temp_cipher;
-        ofile.close();
-
-        // Stop timer
-        t2 = clock();
-        float diff ((float)t2-(float)t1);
-        float milliseconds = (diff / CLOCKS_PER_SEC) * 1000;
-
-        cout << "\nEncryption successful." << 
-                "\nPlease find the cipher text in encrypted.txt\n\n";
-
-        int bitlen = p.length() * 8;
-        cout << "Stats\n" << "=====\n";
-        cout << "Characters count   : " << p.length() << endl;
-        cout << "Bits count         : " << "64 * " << (bitlen / 64) << " bits\n";
-        cout << "Encryption runtime : " << milliseconds << " ms\n\n"; 
-    }  
-    else if (mode == 'D') {  
+    if (mode == 'D') {  
         string gibberish;
         string temp_decipher;
 
-        // Read the cipher text file
-        ifstream ifile;
-        ifile.open("encrypted.txt");
-        getline(ifile, gibberish);
-        ifile.close();
+        gibberish = "¶$³s>½oÖ";
 
         // Take input of the cipher text 64 bits at a time
         for (int i = 0; i < gibberish.length(); i += 8) {
@@ -421,10 +377,6 @@ int run(string testkey)
             bitset < 64 > decipher = decrypt(gibberish_bits);
             temp_decipher += to_string(decipher);
         }
-        ofstream ofile;
-        ofile.open("decrypted.txt");
-        ofile << temp_decipher;
-        ofile.close();
 
         //cout << "\nDecrypted text: " << temp_decipher << endl << endl;
         if (temp_decipher == "brownies") {
@@ -474,6 +426,17 @@ void brute(int start, int end) {
 
 int main() 
 {   
-    brute(35, 36);
+    thread t1 (brute, 35, 45);
+    thread t2 (brute, 46, 55);
+    thread t3 (brute, 56, 65);
+    thread t4 (brute, 66, 75);
+    thread t5 (brute, 76, 85);
+
+    t1.join();
+    t2.join();
+    t3.join();
+    t4.join();
+    t5.join();
+
     return 0;
 }
