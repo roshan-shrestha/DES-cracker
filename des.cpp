@@ -351,7 +351,7 @@ bitset < 64 > decrypt(bitset < 64 > & cipher)
     return plain;
 }
 
-int run(string testkey)
+void run(string testkey)
 {
 
     string k = testkey;
@@ -378,19 +378,17 @@ int run(string testkey)
             temp_decipher += to_string(decipher);
         }
 
-        //cout << "\nDecrypted text: " << temp_decipher << endl << endl;
         if (temp_decipher == "brownies") {
-            cout << "KEY FOUND!\n";
+            cout << "KEY FOUND! " << k << endl;
 
-            return 0;
+                ofstream ofile;
+                ofile.open("keyfound.txt");
+                ofile << k;
+                ofile.close();
+
+            exit(0);
         }
     } 
-    
-    else 
-    {
-        cout << "\nInvalid input. Let's start over again.\n";
-    }
-    return 0;
 }
 
 void brute(int start, int end) {
