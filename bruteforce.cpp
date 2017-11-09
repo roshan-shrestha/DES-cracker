@@ -21,7 +21,6 @@
 #include <iostream>
 #include <bitset>
 #include <string>
-#include <thread>
 #include <fstream>
 #include <time.h>
 
@@ -352,55 +351,151 @@ bitset < 64 > decrypt(bitset < 64 > & cipher)
     return plain;
 }
 
+void welcome(char * mode)
+{   
+    //  system("clear"); // only for Linux and Mac
+    // Display a 'stylish' welcome logo
+    cout << endl <<
+    string (38, '=') << "\n\n" <<
+    "    Welcome to Half Baked Brownies\n" <<
+    "          ____  _____ ____\n" << 
+    "         |  _ \\| ____/ ___| \n" <<
+    "         | | | |  _| \\___ \\ \n" <<
+    "         | |_| | |___ ___) | \n" <<
+    "         |____/|_____|____/ \n\n" <<
 
-void run(string testkey)
+    string (38, '=') << "\n\n" <<
+    "Enter E to encrypt or D to decrypt: ";
+    cin >> (mode);
+    * mode = toupper( * mode);
+}
+
+void run(string testkey) 
 {
-
+    
+    // Read the key text file
+    
     string k = testkey;
 
     key_64 = to_bits(k.c_str());
     key_gen();
+    clock_t t1, t2;
     
     // Mode to check Encrypt or Decrypt
     char mode;
     char pad_count;
+    // welcome( & mode);
 
-    mode = 'D';
+    mode = 'E';
+    if (mode == 'E') {     
+        cout << "\nEncrypting...\n";
+        
+        // Timer starts here
+        t1 = clock();
 
-    if (mode == 'D') {  
-        string gibberish;
-        string temp_decipher;
-
-        // gibberish = "¶$³s>½oÖ";
-        // gibberish = "}ÃéMueŒJ";
-
-        // Read the cipher text file
-        ifstream ifile;
-        ifile.open("ciphertext.txt");
-        getline(ifile, gibberish);
+        // Read the plain text file 
+        ifstream ifile("plain.txt");
+        string p;
+        getline(ifile, p);
         ifile.close();
-
-        // Take input of the cipher text 64 bits at a time
-        for (int i = 0; i < gibberish.length(); i += 8) {
-            bitset < 64 > gibberish_bits = to_bits((gibberish.substr(i, 8)).c_str());
-            bitset < 64 > decipher = decrypt(gibberish_bits);
-            temp_decipher += to_string(decipher);
+        pad_text( & p);
+        string temp_cipher;
+    
+        // Encrypt the plain text 64 bits at a time
+        for (int i = 0; i < p.length(); i += 8) {
+            bitset < 64 > message = to_bits((p.substr(i, 8)).c_str());
+            bitset < 64 > cipher = encrypt(message);
+            temp_cipher += to_string(cipher);
         }
+        
+        // ofstream ofile;
+        // ofile.open("encrypted.txt");
+        // ofile << temp_cipher;
+        // ofile.close();
 
-        cout << temp_decipher << endl; 
+        // Stop timer
+        t2 = clock();
+        float diff ((float)t2-(float)t1);
+        float milliseconds = (diff / CLOCKS_PER_SEC) * 1000;
 
-        // if (temp_decipher == "hello123") {
-        if (k == "L$!!!!$$") {
-            cout << "KEY FOUND! " << gibberish << endl;
+        cout << "\nEncryption successful." << 
+                "\nPlease find the cipher text in encrypted.txt\n\n";
+
+        int bitlen = p.length() * 8;
+        cout << "Stats\n" << "=====\n";
+        cout << "Characters count   : " << p.length() << endl;
+        cout << "Bits count         : " << "64 * " << (bitlen / 64) << " bits\n";
+        cout << "Encryption runtime : " << milliseconds << " ms\n\n"; 
+
+        ifstream i2file("encrypted.txt");
+        string input;
+        getline(i2file, input);
+        i2file.close();
+
+        cout << temp_cipher << endl; 
+
+        if (temp_cipher == input) {
+        // if (k == "L$!!!!$$") {
+            cout << "KEY FOUND! " << endl;
 
                 ofstream ofile;
                 ofile.open("keyfound.txt");
-                ofile << temp_decipher;
+                ofile << k;
                 ofile.close();
 
             exit(0);
         }
-    } 
+
+
+
+    }  
+    // else if (mode == 'D') {  
+    //     cout << "\nDecrypting...\n" ;
+        
+    //     // Timer starts here
+    //     t1 = clock();
+
+    //     string gibberish;
+    //     string temp_decipher;
+
+    //     // Read the cipher text file
+    //     ifstream ifile;
+    //     ifile.open("encrypted.txt");
+    //     getline(ifile, gibberish);
+    //     ifile.close();
+
+    //     // Take input of the cipher text 64 bits at a time
+    //     for (int i = 0; i < gibberish.length(); i += 8) {
+    //         bitset < 64 > gibberish_bits = to_bits((gibberish.substr(i, 8)).c_str());
+    //         bitset < 64 > decipher = decrypt(gibberish_bits);
+    //         temp_decipher += to_string(decipher);
+    //     }
+    //     ofstream ofile;
+    //     ofile.open("decrypted.txt");
+    //     ofile << temp_decipher;
+    //     ofile.close();
+
+    //     // Stop time
+    //     t2 = clock();
+    //     float diff ((float)t2-(float)t1);
+    //     float milliseconds = (diff / CLOCKS_PER_SEC) * 1000 ;
+
+    //     cout << "\nDecryption successful." << 
+    //             "\nThe message has been saved in decrypted.txt\n\n";
+        
+    //     int bitlen = gibberish.length() * 8;
+    //     cout << "Stats\n" << "=====\n";
+    //     cout << "Characters count   : " << gibberish.length() << endl;
+    //     cout << "Bits count         : " << "64 * " << (bitlen / 64) << " bits\n";
+    //     cout << "Decryption runtime : " << milliseconds << " ms\n\n"; 
+    // } 
+    
+    // else 
+    // {
+    //     cout << "\nInvalid input. Let's start over again.\n";
+    //     welcome ( & mode);
+    // }
+
 }
 
 void brute(int start, int end) {
@@ -422,7 +517,7 @@ void brute(int start, int end) {
                                 key[6] = char(g);
                                 for (int h = 34; h < 128; h+=2) {
                                     key[7] = char(h);
-                                    cout << key << endl;
+                                    // cout << key << endl;
                                     run(key); 
                                 }
                             }
@@ -436,17 +531,5 @@ void brute(int start, int end) {
 
 int main() 
 {   
-    // thread t1 (brute, 35, 45);
-    // thread t2 (brute, 46, 55);
-    // thread t3 (brute, 56, 65);
-    // thread t4 (brute, 66, 75);
-    thread t5 (brute, 76, 85);
-
-    // t1.join();
-    // t2.join();
-    // t3.join();
-    // t4.join();
-    t5.join();
-
-    return 0;
+    brute(76, 77);
 }
