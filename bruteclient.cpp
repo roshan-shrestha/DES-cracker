@@ -1,17 +1,16 @@
 /* 
  *
- *     Filename: des.cpp
- *      Version: 2.0
- *  Description: Implementation of DES
+ *     Filename: clientbrute.cpp
+ *  Description: Implementation of DES cracking with threads
  *
  *       Author: Team "Half Baked Brownies"
  *               Bishal Lama
  *               Narayan Poudel
  *               Nischal Shrestha
  *               Roshan Shrestha
- *         Date: 2017-10-30
+ *         Date: 2017-11-09
  *
- *  Project Part 1
+ *  Project Part 2
  *  CS 455 - Computer Security Fundamentals
  *  Instructor: Dr. Chetan Jaiswal
  *  Truman State University
@@ -23,8 +22,20 @@
 #include <string>
 #include <fstream>
 #include <time.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <netdb.h>
+#include <sys/uio.h>
+#include <sys/time.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 #include <thread>
-
 using namespace std;    
 
 const char shift_count[] = {1, 1, 2, 2, 2, 2, 2, 2};
@@ -134,50 +145,12 @@ const char P[] = {16, 7, 20, 21,
            19, 13, 30, 6,
            22, 11, 4, 25 };
 
+int clientSd;
 
 // Main 64-bit key
 bitset<64> key_64;
 // 8 keys for 8 rounds of encryption              
-bitset<48> key[16]; 
-
-string string_to_hex(const string& input)
-{
-    static const char* const lut = "0123456789ABCDEF";
-    size_t len = input.length();
-
-    string output;
-    output.reserve(2 * len);
-    for (size_t i = 0; i < len; ++i)
-    {
-        const unsigned char c = input[i];
-        output.push_back(lut[c >> 4]);
-        output.push_back(lut[c & 15]);
-    }
-    return output;
-}
-
-string hex_to_string(const string& input)
-{
-    static const char* const lut = "0123456789ABCDEF";
-    size_t len = input.length();
-    if (len & 1) throw std::invalid_argument("odd length");
-
-    string output;
-    output.reserve(len / 2);
-    for (size_t i = 0; i < len; i += 2)
-    {
-        char a = input[i];
-        const char* p = std::lower_bound(lut, lut + 16, a);
-        if (*p != a) throw std::invalid_argument("not a hex digit");
-
-        char b = input[i + 1];
-        const char* q = std::lower_bound(lut, lut + 16, b);
-        if (*q != b) throw std::invalid_argument("not a hex digit");
-
-        output.push_back(((p - lut) << 4) | (q - lut));
-    }
-    return output;
-} 
+bitset<48> key[16];  
 
 //  F(R,K)
 bitset < 32 > f(bitset < 32 > r, bitset < 48 > k) 
@@ -390,6 +363,16 @@ bitset < 64 > decrypt(bitset < 64 > & cipher)
         plain[63 - i] = new_bits[64 - IP_1[i]];
     return plain;
 }
+
+void sendMessage()
+{
+    ifstream i3file("keyfound.txt");
+    string keyinput;
+    getline(i3file, keyinput);
+    i3file.close();
+    send(clientSd, &keyinput, sizeof(keyinput), 0);
+}
+
 void run(string testkey) 
 {
     string k = testkey;
@@ -420,17 +403,21 @@ void run(string testkey)
     i2file.close();
 
     cout << k << endl;
-    if (temp_cipher == input) {
+    if (temp_cipher == input) 
+    {
+    // if (k == "L$!!!!$$") {
         cout << "KEY FOUND: " << k << endl;
 
             ofstream ofile;
             ofile.open("keyfound.txt");
             ofile << k;
             ofile.close();
-
-        exit(0);
+            //abort();
+            sendMessage();
+            exit(0);
     }  
 }
+
 
 void brute(int start, int end) {
     string key = "00000000";
@@ -451,6 +438,7 @@ void brute(int start, int end) {
                                 key[6] = char(g);
                                 for (int h = 126; h > 34; h-=2) {
                                     key[7] = char(h);
+                                    // cout << key << endl;
                                     run(key); 
                                 }
                             }
@@ -462,20 +450,39 @@ void brute(int start, int end) {
     }
 }
 
-int main() 
+int main(int argc, char *argv[])
 {   
+    // read ip address and port number
+    if(argc != 3)
+    {
+        cerr << "Usage: ip_address port" << endl; exit(0); 
+    } 
+    //Input the IP address and port number 
+    char *serverIp = argv[1]; 
+    int port = atoi(argv[2]);
 
-    // thread t1 (brute, 35, 45);
-    // thread t2 (brute, 46, 55);
-    thread t3 (brute, 56, 65);
-    thread t4 (brute, 66, 75);
-    thread t5 (brute, 76, 77);
+    struct hostent* host = gethostbyname(serverIp); 
+    sockaddr_in sendSockAddr;   
+    bzero((char*)&sendSockAddr, sizeof(sendSockAddr)); 
+    sendSockAddr.sin_family = AF_INET; 
+    sendSockAddr.sin_addr.s_addr = inet_addr(inet_ntoa(*(struct in_addr*)*host->h_addr_list));
+    sendSockAddr.sin_port = htons(port);
+    clientSd = socket(AF_INET, SOCK_STREAM, 0);
 
-    // t1.join();
-    // t2.join();
+    int status = connect(clientSd,
+                         (sockaddr*) &sendSockAddr, sizeof(sendSockAddr));
+    if(status < 0)
+    {
+        cout<<"Error connecting to socket!"<<endl;
+    }
+    cout << "Connected to the server!" << endl;
+    cout << "Running Brute Force" << endl;
+
+    thread t2(brute,75,76);
+    thread t3(brute,76,77);
+    thread t4(brute,74,75);
+    t2.join();
     t3.join();
     t4.join();
-    t5.join();
-
-    return 0;
+    close(clientSd);
 }
